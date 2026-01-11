@@ -20,34 +20,104 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS DE CONOCIMIENTO (CACES) ---
+# --- BASE DE DATOS DE CONOCIMIENTO (CACES - ESTRUCTURA NUMERADA OFICIAL) ---
 ESQUEMA_ACADEMICO = {
     "Medicina": {
-        "Medicina Interna": ["Emergencias clínicas", "Sistema cardiovascular", "Sistema tegumentario", "Aparato digestivo", "Sistema endócrino", "Sistema hematopoyético", "Enfermedades infecciosas", "Aparato renal y urinario", "Sistema nervioso", "Aparato respiratorio", "Enfermedades autoinmunes"],
-        "Pediatría": ["Neonatología", "Pediatría General"],
-        "Gíneco Obstetricia": ["Ginecología", "Obstetricia"],
-        "Cirugía": ["Cirugía general", "Abdomen agudo", "Oftalmología", "Otorrinolaringología", "Traumatología", "Urología"],
-        "Salud Mental": ["Condiciones psicosociales", "Trastornos mentales"],
-        "Salud Pública": ["Atención primaria", "Epidemiología", "Investigación", "Programas MSP"],
-        "Bioética": ["Bioética"]
+        "1. Medicina Interna": [
+            "1.1 Emergencias clínicas", "1.2. Sistema cardiovascular", "1.3. Sistema tegumentario", 
+            "1.4. Aparato digestivo", "1.5. Sistema endócrino", "1.6. Sistema hematopoyético", 
+            "1.7. Enfermedades infecciosas", "1.8. Aparato renal y urinario", "1.9. Sistema nervioso", 
+            "1.10. Aparato respiratorio", "1.11. Enfermedades autoinmunes"
+        ],
+        "2. Pediatría": [
+            "2.1. Neonatología", "2.2. Pediatría"
+        ],
+        "3. Gíneco Obstetricia": [
+            "3.1. Ginecología", "3.2. Obstetricia"
+        ],
+        "4. Cirugía": [
+            "4.1 Cirugía general", "4.2 Abdomen agudo", "4.3 Oftalmología", 
+            "4.4 Otorrinolaringología", "4.5 Traumatología", "4.6 Urología"
+        ],
+        "5. Salud Mental": [
+            "5.1. Condiciones psicosociales por ciclos de vida", "5.2. Trastornos mentales"
+        ],
+        "6. Salud Pública": [
+            "6.1. Componentes de atención primaria de salud", "6.2. Epidemiología", 
+            "6.3. Investigación en salud", "6.4 Programas y estrategias del Ministerio de Salud Pública"
+        ],
+        "7. Bioética": [
+            "7.1. Bioética"
+        ]
     },
     "Enfermería": {
-        "Fundamentos del cuidado": ["Generalidades", "Procedimientos básicos", "Proceso de atención (PAE)", "Bioseguridad", "Ética", "Seguridad", "Salud sexual"],
-        "Cuidados mujer, RN, niño": ["Salud sexual mujer", "Embarazo, parto, puerperio", "Gineco-obstétricos", "Neonatología", "Niñez y adolescencia"],
-        "Cuidados adulto y mayor": ["Generalidades", "Patologías clínicas", "Quirúrgico", "Procedimientos"],
-        "Cuidado familiar/comunitario": ["Generalidades", "Bases cuidado", "Trabajo familiar"],
-        "Bases educativas/administrativas": ["Educación", "Administración", "Investigación", "Epidemiología"]
+        "1. Fundamentos del cuidado enfermero": [
+            "1.1. Generalidades para el cuidado enfermero", "1.2. Procedimientos básicos del cuidado enfermero",
+            "1.3. Proceso de atención en Enfermería", "1.4. Bioseguridad", "1.5. Ética en el ejercicio profesional",
+            "1.6. Seguridad y calidad en el cuidado enfermero", "1.7. Salud sexual y reproductiva"
+        ],
+        "2. Cuidados de la mujer, recién nacido, niño y adolescente": [
+            "2.1. Salud sexual y reproductiva de la mujer", "2.2. Cuidados de enfermería en el embarazo, parto y puerperio",
+            "2.3. Cuidados gíneco obstétricos de la mujer", "2.4. Cuidados de enfermería en el recién nacido",
+            "2.5. Generalidades sobre niñez y adolescencia", "2.6. Cuidados de enfermería en la niñez y adolescencia"
+        ],
+        "3. Cuidados del adulto y adulto mayor": [
+            "3.1. Generalidades del cuidado de enfermería del adulto y adulto mayor",
+            "3.2. Cuidados de enfermería en el adulto y adulto mayor",
+            "3.3. Cuidados de enfermería a personas con problemas quirúrgicos más frecuentes",
+            "3.4. Procedimientos básicos del cuidado enfermero en pacientes adultos y adultos mayores"
+        ],
+        "4. Cuidado familiar, comunitario e intercultural": [
+            "4.1. Generalidades sobre el cuidado familiar y comunitario", "4.2. Bases para el cuidado familiar y comunitario",
+            "4.3. La enfermería en el trabajo familiar y comunitario"
+        ],
+        "5. Bases educativas, administrativas, investigativas y epidemiológicas del cuidado enfermero": [
+            "5.1. Educación para la salud", "5.2. Bases administrativas del cuidado",
+            "5.3. Bases de investigación científica: metodología de investigación",
+            "5.4. Bases epidemiológicas del cuidado: vigilancia epidemiológica"
+        ]
     },
     "Odontología": {
-        "Operatoria dental": ["Lesiones cariosas", "Lesiones no cariosas", "Procesos restauradores"],
-        "Odontopediatría": ["Conducta", "Desarrollo", "Caries niño", "Pulpa/Trauma"],
-        "Cirugía": ["Diagnóstico", "Anestesia", "Procedimientos"],
-        "Rehabilitación Oral": ["Oclusión", "Prótesis fija", "Prótesis removible", "Prótesis total", "Endodonciados"],
-        "Endodoncia": ["Diagnóstico", "Tratamiento", "Complicaciones"],
-        "Periodoncia": ["Generalidades", "Clasificación 2017", "Tratamiento"],
-        "Patología bucal": ["Tejidos duros", "Tejidos blandos"],
-        "Farmacología": ["Anestésicos", "Analgésicos/AINES", "Antibióticos"],
-        "Medicina Interna": ["Manejo pacientes especiales"]
+        "1. Operatoria dental": [
+            "1.1. Lesiones cariosas", "1.2. Lesiones no cariosas", "1.3. Procesos restauradores directos"
+        ],
+        "2. Odontopediatría": [
+            "2.1. Técnicas de manejo de la conducta de pacientes pediátricos", "2.2. Desarrollo dental y anomalías del desarrollo",
+            "2.3. Higiene oral mecánica y química en el hogar", "2.4. Caries dental en el niño y el adolescente",
+            "2.5. Selladores de fosas y fisuras y uso de fluoruros", "2.6. Alteraciones pulpares en dientes deciduos y control del dolor",
+            "2.7. Traumatismos de los dientes y tejidos de sostén"
+        ],
+        "3. Cirugía": [
+            "3.1. Diagnóstico clínico y complementario", "3.2. Anestesia", "3.3. Principios de la técnica quirúrgica y exodoncia",
+            "3.4. Indicaciones para cirugía pre protésica", "3.5. Infecciones bucales y maxilares", "3.6. Manejo de urgencias en cirugía"
+        ],
+        "4. Rehabilitación Oral": [
+            "4.1. Oclusión", "4.2. Prótesis fija", "4.3. Prótesis parcial removible", "4.4 Prótesis total", 
+            "4.5. Rehabilitación de dientes endodonciados"
+        ],
+        "5. Endodoncia": [
+            "5.1. Diagnóstico de alteraciones pulpares y periapicales", "5.2. Tratamiento endodóncico",
+            "5.3. Retratamiento y cirugía periapical", "5.4. Complicaciones en endodoncia"
+        ],
+        "6. Periodoncia": [
+            "6.1. Anatomía periodontal", "6.2. Exámenes diagnósticos en periodoncia",
+            "6.3. Etiopatogenia de la enfermedad periodontal", 
+            "6.4. Diagnóstico y clasificación de patologías periodontales (clasificación 2017)",
+            "6.5. Tratamiento periodontal"
+        ],
+        "7. Patología Bucal": [
+            "7.1. Lesiones de tejidos duros y diagnóstico diferencial", "7.2. Patología de tejidos blandos y diagnóstico diferencial",
+            "7.3 Síndromes sistémicos"
+        ],
+        "8. Farmacología": [
+            "8.1. Anestésicos locales", "8.2. Analgésicos y antiinflamatorios", 
+            "8.3. Antibacterianos", "8.4. Antivirales y antimicóticos"
+        ],
+        "9. Medicina Interna": [
+            "9.1. Enfermedades metabólicas", "9.2. Enfermedades respiratorias", "9.3. Embarazo",
+            "9.4. Urgencias y emergencias en Odontología", "9.5. Enfermedades cardiovasculares",
+            "9.6. Trastornos de la coagulación", "9.7. Soporte vital básico"
+        ]
     }
 }
 
@@ -55,37 +125,30 @@ ESQUEMA_ACADEMICO = {
 DIRECTORIO_BASE = "biblioteca_digital"
 
 def inicializar_carpetas():
-    """Crea las carpetas si no existen"""
     if not os.path.exists(DIRECTORIO_BASE):
         os.makedirs(DIRECTORIO_BASE)
-    
     for carrera in ESQUEMA_ACADEMICO.keys():
         ruta = os.path.join(DIRECTORIO_BASE, carrera)
         if not os.path.exists(ruta):
             os.makedirs(ruta)
 
 def guardar_pdf(archivo, carrera):
-    """Guarda un archivo subido en la carpeta correspondiente"""
     ruta_carpeta = os.path.join(DIRECTORIO_BASE, carrera)
     ruta_archivo = os.path.join(ruta_carpeta, archivo.name)
-    
     with open(ruta_archivo, "wb") as f:
         f.write(archivo.getbuffer())
     return ruta_archivo
 
 def listar_archivos(carrera):
-    """Devuelve la lista de PDFs guardados para una carrera"""
     ruta_carpeta = os.path.join(DIRECTORIO_BASE, carrera)
     if os.path.exists(ruta_carpeta):
         return [f for f in os.listdir(ruta_carpeta) if f.endswith('.pdf')]
     return []
 
 def leer_biblioteca_carrera(carrera):
-    """Lee todos los PDFs de una carrera y extrae su texto"""
     texto_total = ""
     archivos = listar_archivos(carrera)
     lista_fuentes = []
-    
     ruta_carpeta = os.path.join(DIRECTORIO_BASE, carrera)
     
     for nombre_archivo in archivos:
@@ -93,11 +156,9 @@ def leer_biblioteca_carrera(carrera):
             ruta_completa = os.path.join(ruta_carpeta, nombre_archivo)
             reader = pypdf.PdfReader(ruta_completa)
             texto_archivo = f"\n--- INICIO FUENTE: {nombre_archivo} ---\n"
-            # Limitamos a las primeras 50 páginas por libro para no saturar memoria
             for page in reader.pages[:50]: 
                 texto_archivo += page.extract_text() + "\n"
             texto_archivo += f"\n--- FIN FUENTE: {nombre_archivo} ---\n"
-            
             texto_total += texto_archivo
             lista_fuentes.append(nombre_archivo)
         except Exception as e:
@@ -111,15 +172,12 @@ def configurar_api():
     with st.sidebar:
         st.header("⚙️ Configuración")
         api_key = st.text_input("Ingresa tu API Key de Google Gemini", type="password")
-        
-        # Monitor de Biblioteca
         st.divider()
         st.write("📚 **Estado de la Biblioteca**")
         inicializar_carpetas()
         for carrera in ESQUEMA_ACADEMICO.keys():
             n = len(listar_archivos(carrera))
             st.caption(f"- {carrera}: {n} documentos")
-            
         return api_key
 
 def autodetectar_modelo(api_key):
@@ -127,35 +185,27 @@ def autodetectar_modelo(api_key):
     try:
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         if not available_models: return None, "No hay modelos disponibles."
-        
-        # Prioridad: Flash > Pro
         modelo_elegido = next((m for m in available_models if 'flash' in m.lower()), None)
         if not modelo_elegido:
             modelo_elegido = next((m for m in available_models if 'pro' in m.lower()), available_models[0])
-            
         return genai.GenerativeModel(modelo_elegido), None
     except Exception as e:
         return None, str(e)
 
 def procesar_con_ia(texto, api_key, carrera_seleccionada):
     if not api_key: return "⚠️ Error: Falta API Key."
-    
-    # 1. Cargar conocimiento de la biblioteca local
     texto_bibliografia, fuentes = leer_biblioteca_carrera(carrera_seleccionada)
-    
-    # 2. Configurar IA
     model, error = autodetectar_modelo(api_key)
     if error: return f"Error IA: {error}"
     
-    # 3. Construir Prompt
     contexto_extra = ""
     if texto_bibliografia:
         contexto_extra = f"""
-        URGENTE - USA ESTA BIBLIOGRAFÍA OFICIAL PARA RESPONDER:
-        El usuario ha proporcionado documentos oficiales ({', '.join(fuentes)}).
-        Tu máxima prioridad es basar las respuestas y el feedback en estos textos.
+        URGENTE - USA ESTA BIBLIOGRAFÍA OFICIAL:
+        Documentos cargados: {', '.join(fuentes)}.
+        Prioriza esta información para las respuestas y feedback.
         
-        CONTENIDO BIBLIOTECA LOCAL:
+        CONTENIDO BIBLIOTECA:
         {texto_bibliografia[:300000]} 
         """
     
@@ -165,25 +215,28 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     {contexto_extra}
     
     TAREA:
-    Analiza las preguntas proporcionadas. Tu objetivo principal es generar la metadata (respuestas, feedback, clasificación) SIN MODIFICAR EL TEXTO DE LA PREGUNTA.
+    Analiza las preguntas proporcionadas.
     
-    REGLAS ESTRICTAS DE FORMATO:
-    1. **Pregunta**: DEBE SER UNA COPIA EXACTA, LITERAL Y SIN CAMBIOS del texto original ingresado. No corrijas ortografía, no elimines espacios, no resumas. Si la pregunta original tiene errores, déjalos tal cual.
-    2. **Opciones**: Genera 4 opciones separadas por "|". (Ej: "Opción A|Opción B|Opción C|Opción D").
-    3. **Respuesta Correcta**: Debe ser el TEXTO EXACTO e IDÉNTICO de la opción correcta tal como aparece en el campo de Opciones. (Ej: Si las opciones son "Perro|Gato|Pez|Ave" y la correcta es Gato, este campo debe decir "Gato", y NO "B", "Opción B" o "gato" en minúscula).
-    4. **Feedback**: Estructura OBLIGATORIA con saltos de línea:
-       - Respuesta correcta: [Explicación detallada]
-       - Respuestas incorrectas: [Explicación de por qué las otras fallan]
+    1. **CORRECCIÓN DE FORMA (PERMITIDO)**: Si la pregunta original tiene errores ortográficos, dobles espacios, falta de tildes o saltos de línea que dificultan la lectura, CORRÍGELOS para que se vea profesional.
+    2. **CORRECCIÓN DE FONDO (PROHIBIDO)**: NO cambies la terminología médica, los valores clínicos ni el sentido de la pregunta.
+    
+    REGLAS ESTRICTAS DE FORMATO Y CLASIFICACIÓN:
+    1. **Opciones**: 4 opciones separadas por "|".
+    2. **Respuesta Correcta**: COPIA EXACTA e IDÉNTICA de la opción correcta.
+    3. **Feedback**: Estructura OBLIGATORIA con saltos de línea:
+       - Respuesta correcta: [Explicación]
+       - Respuestas incorrectas: [Explicación]
        - Mnemotecnia/Tip: [Opcional]
-       - Bibliografía: [CITA OBLIGATORIA EN FORMATO VANCOUVER. Ej: Apellido Inicial. Título del libro. Edición. Ciudad: Editorial; Año.]
+       - Bibliografía: [CITA OBLIGATORIA EN FORMATO VANCOUVER]
+    4. **Clasificación**: Debes usar los nombres EXACTOS del siguiente esquema, incluyendo sus NÚMEROS (ej: "1.1 Emergencias clínicas").
     
-    ESQUEMA DE CLASIFICACIÓN ({carrera_seleccionada}):
+    ESQUEMA OFICIAL ({carrera_seleccionada}):
     {json.dumps(ESQUEMA_ACADEMICO[carrera_seleccionada], ensure_ascii=False)}
 
     SALIDA JSON (Array):
     [
         {{
-            "Pregunta": "COPIA LITERAL DE LA PREGUNTA ORIGINAL",
+            "Pregunta": "Texto corregido (solo forma)...",
             "Opciones de Respuesta": "...",
             "Respuesta correcta": "...",
             "feedback": "...",
@@ -222,28 +275,24 @@ api_key = configurar_api()
 
 st.title("🎓 Gestor Académico Inteligente")
 
-# Navegación Principal
 modo = st.radio("Selecciona una opción:", ["📝 Procesar Preguntas", "📚 Administrar Biblioteca"], horizontal=True)
 
 if modo == "📚 Administrar Biblioteca":
     st.header("Gestor de Documentos")
     col1, col2 = st.columns(2)
-    
     with col1:
         st.subheader("Subir Nuevo Documento")
         carrera_upload = st.selectbox("¿A qué carrera pertenece el libro/guía?", list(ESQUEMA_ACADEMICO.keys()))
         archivo_pdf = st.file_uploader("Sube el PDF aquí", type=["pdf"])
-        
         if archivo_pdf and st.button("Guardar en Biblioteca", type="primary"):
             ruta = guardar_pdf(archivo_pdf, carrera_upload)
-            st.success(f"✅ Archivo guardado correctamente en: {carrera_upload}")
+            st.success(f"✅ Guardado en: {carrera_upload}")
             st.balloons()
             time.sleep(1)
             st.rerun()
 
     with col2:
         st.subheader("Documentos Existentes")
-        st.info("Estos son los libros que la IA leerá automáticamente.")
         for carrera in ESQUEMA_ACADEMICO.keys():
             with st.expander(f"📂 {carrera}"):
                 archivos = listar_archivos(carrera)
@@ -255,27 +304,22 @@ if modo == "📚 Administrar Biblioteca":
 
 elif modo == "📝 Procesar Preguntas":
     st.header("Procesamiento de Exámenes")
-    
     col_config, col_input = st.columns([1, 2])
     with col_config:
         st.info("Configuración de Contexto")
         carrera_proceso = st.selectbox("¿De qué carrera son estas preguntas?", list(ESQUEMA_ACADEMICO.keys()))
-        
-        # Mostrar qué libros se usarán
         libros_disponibles = listar_archivos(carrera_proceso)
         if libros_disponibles:
-            st.success(f"✅ Se usarán {len(libros_disponibles)} fuentes de la biblioteca de {carrera_proceso}.")
+            st.success(f"✅ {len(libros_disponibles)} fuentes disponibles.")
         else:
-            st.warning(f"⚠️ La carpeta de {carrera_proceso} está vacía. La IA usará conocimiento general.")
+            st.warning("⚠️ Sin bibliografía específica. Usando conocimiento general.")
 
     with col_input:
         tab_text, tab_file = st.tabs(["Pegar Texto", "Subir Excel"])
         texto_final = None
-        
         with tab_text:
             txt = st.text_area("Pega las preguntas aquí:", height=150)
             if st.button("Procesar Texto"): texto_final = txt
-            
         with tab_file:
             file = st.file_uploader("Sube Excel", type=["xlsx"])
             if file:
@@ -287,22 +331,13 @@ elif modo == "📝 Procesar Preguntas":
     if texto_final:
         with st.status("🧠 Analizando con Biblioteca...", expanded=True) as status:
             res = procesar_con_ia(texto_final, api_key, carrera_proceso)
-            
             if isinstance(res, list):
                 status.update(label="¡Completado!", state="complete", expanded=False)
                 df_res = pd.DataFrame(res)
-                
                 st.divider()
                 st.subheader("Resultados")
                 editado = st.data_editor(df_res, num_rows="dynamic", use_container_width=True)
-                
-                st.download_button(
-                    "📥 Descargar Excel",
-                    convertir_excel(editado),
-                    "banco_preguntas.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    type="primary"
-                )
+                st.download_button("📥 Descargar Excel", convertir_excel(editado), "banco_preguntas.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary")
             else:
                 st.error("Error:")
                 st.warning(res)
