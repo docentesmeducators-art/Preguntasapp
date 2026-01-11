@@ -6,6 +6,7 @@ import json
 import io
 import os
 import pypdf
+import docx  # Librería para leer Word
 import time
 import re
 
@@ -346,6 +347,25 @@ def extraer_paginas_pdf(archivo_pdf):
         st.error(f"Error al leer PDF de preguntas: {str(e)}")
     return paginas
 
+def extraer_texto_docx(archivo):
+    """Extrae el texto de un archivo Word (.docx)"""
+    try:
+        doc = docx.Document(archivo)
+        texto_completo = []
+        for para in doc.paragraphs:
+            texto_completo.append(para.text)
+        return "\n".join(texto_completo)
+    except Exception as e:
+        return f"Error al leer Word: {str(e)}"
+
+def extraer_texto_txt(archivo):
+    """Extrae el texto de un archivo de texto (.txt)"""
+    try:
+        stringio = io.StringIO(archivo.getvalue().decode("utf-8"))
+        return stringio.read()
+    except Exception as e:
+        return f"Error al leer archivo de texto: {str(e)}"
+
 # --- FUNCIONES DE IA ---
 
 def configurar_api():
@@ -509,7 +529,8 @@ elif modo == "📝 Procesar Preguntas":
             st.info("ℹ️ No hay libros subidos. La IA usará su conocimiento general.")
 
     with col_work:
-        tab_txt, tab_xls, tab_pdf = st.tabs(["Pegar Texto", "Subir Excel", "Subir PDF de Preguntas"])
+        # Pestañas para los diferentes métodos de entrada
+        tab_txt, tab_xls, tab_file = st.tabs(["Pegar Texto", "Subir Excel", "Subir Archivo (PDF/Word/Txt)"])
         texto_final = None
         origen_datos = None
         
@@ -528,66 +549,109 @@ elif modo == "📝 Procesar Preguntas":
                     texto_final = "\n---\n".join(df[c].astype(str).tolist())
                     origen_datos = "excel"
         
-        with tab_pdf:
-            pdf_q = st.file_uploader("Sube PDF con preguntas", type=["pdf"])
-            if pdf_q and st.button("Procesar PDF de Preguntas"):
-                origen_datos = "pdf"
-                # Aquí no extraemos todo el texto de golpe, lo manejamos abajo por lotes
+        with tab_file:
+            uploaded_doc = st.file_uploader("Sube PDF, Word o Texto", type=["pdf", "docx", "txt"])
+            if uploaded_doc and st.button("Procesar Archivo"):
+                origen_datos = "archivo"
+                # El procesamiento se hace abajo para manejar pdf por lotes o word/txt de golpe
 
     # Lógica de Procesamiento
-    if origen_datos == "pdf" and pdf_q:
-        with st.status("🚀 Iniciando procesamiento por lotes...", expanded=True) as status:
-            paginas = extraer_paginas_pdf(pdf_q)
-            if not paginas:
-                st.error("No se pudo leer el PDF.")
-                st.stop()
-            
-            # --- ESTRATEGIA DE BATCHING (LOTES) ---
-            # Procesamos de 2 en 2 páginas para evitar errores de Timeout (Error 504)
-            TAMANO_LOTE = 2 
-            lotes = ["\n".join(paginas[i:i+TAMANO_LOTE]) for i in range(0, len(paginas), TAMANO_LOTE)]
-            
-            resultados_totales = []
-            barra_progreso = st.progress(0)
-            
-            st.write(f"📄 Documento dividido en {len(lotes)} partes para análisis detallado.")
-            
-            for i, lote_texto in enumerate(lotes):
-                st.write(f"Analizando parte {i+1} de {len(lotes)}...")
-                res_parcial = procesar_con_ia(lote_texto, api_key, carrera_proceso)
+    if origen_datos == "archivo" and uploaded_doc:
+        tipo_archivo = uploaded_doc.name.split('.')[-1].lower()
+        
+        # CASO 1: PDF (Requiere batching)
+        if tipo_archivo == "pdf":
+            with st.status("🚀 Iniciando procesamiento PDF por lotes...", expanded=True) as status:
+                paginas = extraer_paginas_pdf(uploaded_doc)
+                if not paginas:
+                    st.error("No se pudo leer el PDF.")
+                    st.stop()
                 
-                if isinstance(res_parcial, list):
-                    resultados_totales.extend(res_parcial)
+                # Batching de 2 en 2 páginas
+                TAMANO_LOTE = 2 
+                lotes = ["\n".join(paginas[i:i+TAMANO_LOTE]) for i in range(0, len(paginas), TAMANO_LOTE)]
+                
+                resultados_totales = []
+                barra_progreso = st.progress(0)
+                
+                st.write(f"📄 Documento dividido en {len(lotes)} partes para análisis detallado.")
+                
+                for i, lote_texto in enumerate(lotes):
+                    st.write(f"Analizando parte {i+1} de {len(lotes)}...")
+                    res_parcial = procesar_con_ia(lote_texto, api_key, carrera_proceso)
+                    
+                    if isinstance(res_parcial, list):
+                        resultados_totales.extend(res_parcial)
+                    else:
+                        st.warning(f"⚠️ Hubo un problema en la parte {i+1}: {res_parcial}")
+                    
+                    barra_progreso.progress((i + 1) / len(lotes))
+                    time.sleep(1) # Pausa anti-saturación
+                
+                if resultados_totales:
+                    status.update(label="¡Análisis Completo!", state="complete", expanded=False)
+                    df_res = pd.DataFrame(resultados_totales)
+                    
+                    st.divider()
+                    st.subheader("✅ Resultados Consolidados")
+                    editado = st.data_editor(
+                        df_res, 
+                        num_rows="dynamic", 
+                        use_container_width=True,
+                        column_config={"feedback": st.column_config.TextColumn("Feedback", width="large")}
+                    )
+                    
+                    st.download_button(
+                        "📥 Descargar Excel Final", 
+                        convertir_excel(editado), 
+                        "banco_preguntas_caces.xlsx", 
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                        type="primary"
+                    )
                 else:
-                    st.warning(f"⚠️ Hubo un problema en la parte {i+1}: {res_parcial}")
+                    st.error("No se pudieron extraer preguntas válidas del PDF.")
+        
+        # CASO 2: WORD o TXT (Procesamiento directo porque suelen ser más ligeros)
+        else:
+            with st.status("🧠 Leyendo archivo...", expanded=True) as status:
+                if tipo_archivo == "docx":
+                    texto_final = extraer_texto_docx(uploaded_doc)
+                elif tipo_archivo == "txt":
+                    texto_final = extraer_texto_txt(uploaded_doc)
                 
-                barra_progreso.progress((i + 1) / len(lotes))
-                time.sleep(1) # Pequeña pausa para no saturar la API
-            
-            if resultados_totales:
-                status.update(label="¡Análisis Completo!", state="complete", expanded=False)
-                df_res = pd.DataFrame(resultados_totales)
-                
-                st.divider()
-                st.subheader("✅ Resultados Consolidados")
-                editado = st.data_editor(
-                    df_res, 
-                    num_rows="dynamic", 
-                    use_container_width=True,
-                    column_config={"feedback": st.column_config.TextColumn("Feedback", width="large")}
-                )
-                
-                st.download_button(
-                    "📥 Descargar Excel Final", 
-                    convertir_excel(editado), 
-                    "banco_preguntas_caces.xlsx", 
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                    type="primary"
-                )
-            else:
-                st.error("No se pudieron extraer preguntas válidas del PDF.")
+                if texto_final:
+                    # Si es muy largo, también podríamos hacer batching, pero Word suele ser texto puro
+                    # Vamos a intentar procesarlo de una vez, si falla, el usuario puede dividirlo
+                    st.write("Analizando contenido...")
+                    res = procesar_con_ia(texto_final, api_key, carrera_proceso)
+                    
+                    if isinstance(res, list):
+                        status.update(label="¡Proceso Completado!", state="complete", expanded=False)
+                        df_res = pd.DataFrame(res)
+                        
+                        st.divider()
+                        st.subheader("Resultados")
+                        editado = st.data_editor(
+                            df_res, 
+                            num_rows="dynamic", 
+                            use_container_width=True,
+                            column_config={"feedback": st.column_config.TextColumn("Feedback", width="large")}
+                        )
+                        
+                        st.download_button(
+                            "📥 Descargar Excel", 
+                            convertir_excel(editado), 
+                            "banco_preguntas_caces.xlsx", 
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                            type="primary"
+                        )
+                    else:
+                        st.error("Error en el procesamiento:")
+                        st.warning(res)
+                else:
+                    st.error("No se pudo leer el archivo.")
 
-    elif texto_final:
+    elif texto_final and origen_datos != "archivo":
         # Procesamiento normal para texto corto o Excel
         with st.status("🧠 Analizando...", expanded=True) as status:
             res = procesar_con_ia(texto_final, api_key, carrera_proceso)
