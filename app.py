@@ -5,7 +5,7 @@ import json
 import io
 import os
 import pypdf
-import time  # <--- ESTA ES LA LÍNEA QUE FALTABA
+import time
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(layout="wide", page_title="Clasificador CACES IA")
@@ -165,16 +165,17 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     {contexto_extra}
     
     TAREA:
-    Analiza las preguntas, estandarízalas y clasifícalas.
+    Analiza las preguntas proporcionadas. Tu objetivo principal es generar la metadata (respuestas, feedback, clasificación) SIN MODIFICAR EL TEXTO DE LA PREGUNTA.
     
     REGLAS ESTRICTAS DE FORMATO:
-    1. **Opciones**: 4 opciones separadas por "|". (Ej: "A|B|C|D").
-    2. **Correcta**: COPIA EXACTA de una de las opciones.
-    3. **Feedback**: Estructura OBLIGATORIA con saltos de línea:
-       - Respuesta correcta: [Explicación]
-       - Respuestas incorrectas: [Explicación]
+    1. **Pregunta**: DEBE SER UNA COPIA EXACTA, LITERAL Y SIN CAMBIOS del texto original ingresado. No corrijas ortografía, no elimines espacios, no resumas. Si la pregunta original tiene errores, déjalos tal cual.
+    2. **Opciones**: Genera 4 opciones separadas por "|". (Ej: "Opción A|Opción B|Opción C|Opción D").
+    3. **Respuesta Correcta**: Debe ser el TEXTO EXACTO e IDÉNTICO de la opción correcta tal como aparece en el campo de Opciones. (Ej: Si las opciones son "Perro|Gato|Pez|Ave" y la correcta es Gato, este campo debe decir "Gato", y NO "B", "Opción B" o "gato" en minúscula).
+    4. **Feedback**: Estructura OBLIGATORIA con saltos de línea:
+       - Respuesta correcta: [Explicación detallada]
+       - Respuestas incorrectas: [Explicación de por qué las otras fallan]
        - Mnemotecnia/Tip: [Opcional]
-       - Bibliografía: [CITA EL DOCUMENTO DE LA BIBLIOTECA USADO]
+       - Bibliografía: [CITA OBLIGATORIA EN FORMATO VANCOUVER. Ej: Apellido Inicial. Título del libro. Edición. Ciudad: Editorial; Año.]
     
     ESQUEMA DE CLASIFICACIÓN ({carrera_seleccionada}):
     {json.dumps(ESQUEMA_ACADEMICO[carrera_seleccionada], ensure_ascii=False)}
@@ -182,7 +183,7 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     SALIDA JSON (Array):
     [
         {{
-            "Pregunta": "...",
+            "Pregunta": "COPIA LITERAL DE LA PREGUNTA ORIGINAL",
             "Opciones de Respuesta": "...",
             "Respuesta correcta": "...",
             "feedback": "...",
