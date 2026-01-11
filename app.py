@@ -3,6 +3,7 @@ import pandas as pd
 import google.generativeai as genai
 import json
 import io
+import time
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(layout="wide", page_title="Clasificador CACES IA")
@@ -13,7 +14,6 @@ st.markdown("""
     .main-header {font-size: 2.5rem; color: #1E3A8A; font-weight: bold;}
     .sub-header {font-size: 1.5rem; color: #4B5563;}
     .success-box {padding: 1rem; background-color: #D1FAE5; border-radius: 0.5rem; color: #065F46;}
-    /* Ajuste para que el editor de datos ocupe buen espacio */
     .stDataFrame {width: 100%;}
 </style>
 """, unsafe_allow_html=True)
@@ -157,7 +157,7 @@ def configurar_api():
         api_key = st.text_input("Ingresa tu API Key de Google Gemini", type="password")
         st.info("Esta clave conecta la app con el cerebro de Google AI.")
         
-        # Verificación del esquema cargado (Opcional para el usuario)
+        # Verificación del esquema cargado
         with st.expander("Ver Esquema de Temas Cargado"):
             carrera = st.selectbox("Selecciona Carrera", list(ESQUEMA_ACADEMICO.keys()))
             st.json(ESQUEMA_ACADEMICO[carrera])
@@ -165,20 +165,33 @@ def configurar_api():
         return api_key
 
 def procesar_con_ia(texto, api_key):
-    """Lógica central de conexión con Gemini"""
+    """Lógica robusta de conexión con Gemini"""
     if not api_key: return "⚠️ Error: Falta ingresar la API Key."
     
     genai.configure(api_key=api_key)
     
-    # --- SOLUCIÓN AL ERROR 404 ---
-    # Intentamos conectar con el modelo más nuevo. Si falla, usamos el clásico.
-    try:
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
-        # Hacemos una prueba rápida de conexión
-        model.generate_content("test") 
-    except:
-        # Si el modelo flash falla o no existe, usamos el modelo Pro estándar
-        model = genai.GenerativeModel("gemini-pro")
+    # --- LISTA DE MODELOS A PROBAR (ORDEN DE PREFERENCIA) ---
+    # Esto soluciona el error 404 probando cuál funciona en tu cuenta
+    modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+    
+    model = None
+    errores = []
+
+    # Bucle de intentos
+    for nombre_modelo in modelos:
+        try:
+            temp_model = genai.GenerativeModel(nombre_modelo)
+            # Prueba mínima de vida
+            temp_model.generate_content("test")
+            model = temp_model
+            # Si llegamos aquí, el modelo funciona
+            break 
+        except Exception as e:
+            errores.append(f"{nombre_modelo}: {str(e)}")
+            continue
+    
+    if not model:
+        return f"❌ Error crítico: Ningún modelo de IA respondió. Detalles técnicos: {'; '.join(errores)}"
     
     # Instrucciones maestras para la IA
     prompt = f"""
@@ -214,18 +227,16 @@ def procesar_con_ia(texto, api_key):
     
     try:
         response = model.generate_content(prompt)
-        # Limpieza de la respuesta para obtener solo el JSON puro
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
     except Exception as e:
-        return f"Error procesando la solicitud: {str(e)}. Intenta con menos preguntas a la vez."
+        return f"Error procesando la solicitud con el modelo seleccionado: {str(e)}"
 
 def convertir_excel(df):
     """Convierte el DataFrame a Excel para descargar"""
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Banco_Preguntas')
-        # Ajustar ancho de columnas
         worksheet = writer.sheets['Banco_Preguntas']
         for i, col in enumerate(df.columns):
             width = max(df[col].astype(str).map(len).max(), len(col))
@@ -239,12 +250,11 @@ st.markdown('<div class="sub-header">Clasificación Automática con IA</div>', u
 
 api_key = configurar_api()
 
-# Pestañas para elegir modo de uso
 tab1, tab2 = st.tabs(["📝 Pegar Texto Manualmente", "📂 Subir Archivo Excel"])
 data_a_procesar = None
 
 with tab1:
-    txt_input = st.text_area("Pega aquí tus preguntas (aunque estén desordenadas):", height=200)
+    txt_input = st.text_area("Pega aquí tus preguntas:", height=200)
     if st.button("Procesar Texto", type="primary"): 
         data_a_procesar = txt_input
 
@@ -255,39 +265,24 @@ with tab2:
         st.write("Vista previa:", df.head(2))
         col = st.selectbox("¿En qué columna está el texto de la pregunta?", df.columns)
         if st.button("Procesar Excel", type="primary"):
-            # Unimos todas las preguntas en un solo texto para enviarlas a la IA
             data_a_procesar = "\n---\n".join(df[col].astype(str).tolist())
-
-# --- ZONA DE RESULTADOS ---
 
 if data_a_procesar:
     if not api_key:
-        st.error("⚠️ Por favor ingresa tu API Key en el menú de la izquierda.")
+        st.error("⚠️ Por favor ingresa tu API Key.")
     else:
         with st.status("🤖 La IA está trabajando...", expanded=True) as status:
-            st.write("Analizando contenido médico...")
-            st.write("Clasificando según temario CACES...")
+            st.write("Buscando el mejor modelo de IA disponible...")
             
             resultado = procesar_con_ia(data_a_procesar, api_key)
             
             if isinstance(resultado, list):
                 status.update(label="¡Proceso Completado!", state="complete", expanded=False)
-                
                 df_res = pd.DataFrame(resultado)
-                
                 st.divider()
                 st.subheader("✅ Revisa y Edita los Resultados")
-                
-                # Editor interactivo tipo Excel
-                edited_df = st.data_editor(
-                    df_res, 
-                    num_rows="dynamic",
-                    use_container_width=True
-                )
-                
+                edited_df = st.data_editor(df_res, num_rows="dynamic", use_container_width=True)
                 st.divider()
-                
-                # Botón de Descarga
                 excel_bytes = convertir_excel(edited_df)
                 st.download_button(
                     label="📥 Descargar Excel Final (.xlsx)",
@@ -298,5 +293,5 @@ if data_a_procesar:
                 )
             else:
                 status.update(label="Error", state="error")
-                st.error("Hubo un problema con la respuesta de la IA:")
+                st.error("Hubo un problema:")
                 st.warning(resultado)
