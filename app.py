@@ -17,11 +17,14 @@ st.markdown("""
     .main-header {font-size: 2.5rem; color: #1E3A8A; font-weight: bold;}
     .sub-header {font-size: 1.5rem; color: #4B5563;}
     .stTextArea textarea {font-size: 14px;}
+    /* Ajuste para que las celdas de feedback se vean mejor con saltos de línea */
+    div[data-testid="stDataFrame"] div[role="grid"] div[role="row"] {
+        min-height: 100px !important; 
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- BASE DE DATOS MAESTRA (HARDCODED) ---
-# Esta es la "Verdad Absoluta" del sistema. La IA debe elegir de aquí.
 ESQUEMA_ACADEMICO = {
     "Medicina": {
         "1. Medicina Interna": {
@@ -314,7 +317,6 @@ def leer_biblioteca_carrera(carrera):
             reader = pypdf.PdfReader(ruta_completa)
             texto_archivo = f"\n--- INICIO FUENTE BIBLIOGRÁFICA: {nombre_archivo} ---\n"
             
-            # Leemos primeras 60 paginas para contexto
             paginas_a_leer = min(len(reader.pages), 60)
             for i in range(paginas_a_leer):
                 contenido = reader.pages[i].extract_text()
@@ -328,6 +330,17 @@ def leer_biblioteca_carrera(carrera):
             print(f"Error leyendo {nombre_archivo}: {e}")
             
     return texto_total, lista_fuentes
+
+def extraer_texto_pdf_preguntas(archivo_pdf):
+    """Extrae texto plano de un PDF de preguntas subido por el usuario"""
+    texto_extraido = ""
+    try:
+        reader = pypdf.PdfReader(archivo_pdf)
+        for page in reader.pages:
+            texto_extraido += page.extract_text() + "\n"
+    except Exception as e:
+        return f"Error al leer PDF de preguntas: {str(e)}"
+    return texto_extraido
 
 # --- FUNCIONES DE IA ---
 
@@ -383,15 +396,15 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     {contexto_extra}
     
     TAREA:
-    Analiza las preguntas proporcionadas. Estandariza su formato y CLASIFÍCALAS.
+    Analiza el texto de entrada que contiene una o varias preguntas. Tu objetivo es detectar las preguntas, estandarizar su formato y CLASIFICARLAS.
     
     REGLAS ESTRICTAS DE FORMATO:
     1. **Opciones**: Siempre 4 opciones, separadas por "|".
     2. **Respuesta Correcta**: COPIA EXACTA e IDÉNTICA de la opción correcta.
-    3. **Feedback**: Estructura obligatoria con saltos de línea:
-       - Respuesta correcta: [Explicación]
-       - Respuestas incorrectas: [Explicación]
-       - Mnemotecnia/Tip: [Opcional]
+    3. **Feedback**: Estructura OBLIGATORIA. Separa CADA sección con DOBLE SALTO DE LÍNEA (\\n\\n) para que se visualicen como párrafos distintos:
+       - Respuesta correcta: [Explicación]\\n\\n
+       - Respuestas incorrectas: [Explicación]\\n\\n
+       - Mnemotecnia/Tip: [Opcional]\\n\\n
        - Bibliografía: [Cita en formato VANCOUVER]
 
     REGLAS DE CLASIFICACIÓN (OBLIGATORIO):
@@ -416,7 +429,7 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
         }}
     ]
     
-    PREGUNTAS A PROCESAR: 
+    TEXTO CON PREGUNTAS A PROCESAR: 
     {texto}
     """
     
@@ -432,9 +445,15 @@ def convertir_excel(df):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Banco_Preguntas')
         worksheet = writer.sheets['Banco_Preguntas']
+        # Formato de celda con ajuste de texto para el feedback
+        workbook = writer.book
+        format_wrap = workbook.add_format({'text_wrap': True, 'valign': 'top'})
+        
         for i, col in enumerate(df.columns):
-            width = max(df[col].astype(str).map(len).max(), len(col))
-            worksheet.set_column(i, i, min(width, 50))
+            width = 50 if col == "feedback" else 20
+            width = 40 if col == "Pregunta" else width
+            worksheet.set_column(i, i, width, format_wrap if col == "feedback" else None)
+            
     return output.getvalue()
 
 # --- INTERFAZ UI ---
@@ -490,7 +509,8 @@ elif modo == "📝 Procesar Preguntas":
             st.info("ℹ️ No hay libros subidos. La IA usará su conocimiento general.")
 
     with col_work:
-        tab_txt, tab_xls = st.tabs(["Pegar Texto", "Subir Excel"])
+        # Pestañas para los diferentes métodos de entrada
+        tab_txt, tab_xls, tab_pdf = st.tabs(["Pegar Texto", "Subir Excel", "Subir PDF de Preguntas"])
         texto_final = None
         
         with tab_txt:
@@ -504,6 +524,16 @@ elif modo == "📝 Procesar Preguntas":
                 c = st.selectbox("Columna Pregunta", df.columns)
                 if st.button("Procesar Excel"):
                     texto_final = "\n---\n".join(df[c].astype(str).tolist())
+        
+        with tab_pdf:
+            pdf_q = st.file_uploader("Sube PDF con preguntas", type=["pdf"])
+            if pdf_q and st.button("Procesar PDF de Preguntas"):
+                with st.spinner("Extrayendo texto del PDF..."):
+                    texto_extraido = extraer_texto_pdf_preguntas(pdf_q)
+                    if texto_extraido:
+                        texto_final = texto_extraido
+                    else:
+                        st.error("No se pudo extraer texto del PDF.")
 
     if texto_final:
         with st.status("🧠 Analizando y clasificando según esquema oficial...", expanded=True) as status:
@@ -515,7 +545,14 @@ elif modo == "📝 Procesar Preguntas":
                 
                 st.divider()
                 st.subheader("Resultados")
-                editado = st.data_editor(df_res, num_rows="dynamic", use_container_width=True)
+                editado = st.data_editor(
+                    df_res, 
+                    num_rows="dynamic", 
+                    use_container_width=True,
+                    column_config={
+                        "feedback": st.column_config.TextColumn("Feedback", width="large")
+                    }
+                )
                 
                 st.download_button(
                     "📥 Descargar Excel", 
