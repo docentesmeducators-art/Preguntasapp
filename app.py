@@ -5,6 +5,7 @@ import json
 import io
 import os
 import pypdf
+import time  # <--- ESTA ES LA LÍNEA QUE FALTABA
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(layout="wide", page_title="Clasificador CACES IA")
