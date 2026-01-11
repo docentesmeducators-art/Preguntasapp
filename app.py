@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
+from google.api_core import retry
 import json
 import io
 import os
 import pypdf
 import time
+import re
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(layout="wide", page_title="Clasificador CACES IA")
@@ -21,8 +23,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- BASE DE DATOS DE CONOCIMIENTO (ESTRUCTURA JERÁRQUICA 4 NIVELES) ---
-# Nota: Esta estructura guía a la IA. La lista de "Temas" se deja vacía o genérica 
-# para que la IA la llene EXACTAMENTE leyendo el PDF que subas a la biblioteca.
 ESQUEMA_ACADEMICO = {
     "Medicina": {
         "1. Medicina Interna": {
@@ -32,7 +32,7 @@ ESQUEMA_ACADEMICO = {
             "1.4. Aparato digestivo": [],
             "1.5. Sistema endócrino": [],
             "1.6. Sistema hematopoyético": [],
-            "1.7. Enfermedades infecciosas": [], # La IA buscará aquí "1.7.2 Tétanos..."
+            "1.7. Enfermedades infecciosas": [], 
             "1.8. Aparato renal y urinario": [],
             "1.9. Sistema nervioso": [],
             "1.10. Aparato respiratorio": [],
@@ -148,7 +148,7 @@ ESQUEMA_ACADEMICO = {
     }
 }
 
-# --- GESTIÓN DE BIBLIOTECA (SISTEMA DE ARCHIVOS) ---
+# --- GESTIÓN DE BIBLIOTECA ---
 DIRECTORIO_BASE = "biblioteca_digital"
 
 def inicializar_carpetas():
@@ -172,6 +172,12 @@ def listar_archivos(carrera):
         return [f for f in os.listdir(ruta_carpeta) if f.endswith('.pdf')]
     return []
 
+def limpiar_texto(texto):
+    """Elimina excesos de espacios y saltos de línea para ahorrar memoria"""
+    texto = re.sub(r'\n+', '\n', texto) # Reducir saltos de línea múltiples
+    texto = re.sub(r'\s+', ' ', texto)  # Reducir espacios múltiples
+    return texto.strip()
+
 def leer_biblioteca_carrera(carrera):
     texto_total = ""
     archivos = listar_archivos(carrera)
@@ -182,10 +188,20 @@ def leer_biblioteca_carrera(carrera):
         try:
             ruta_completa = os.path.join(ruta_carpeta, nombre_archivo)
             reader = pypdf.PdfReader(ruta_completa)
-            texto_archivo = f"\n--- INICIO FUENTE: {nombre_archivo} ---\n"
-            for page in reader.pages[:50]: 
-                texto_archivo += page.extract_text() + "\n"
-            texto_archivo += f"\n--- FIN FUENTE: {nombre_archivo} ---\n"
+            texto_archivo = f"\n--- DOCUMENTO: {nombre_archivo} ---\n"
+            
+            # Leemos máximo 60 páginas por documento para evitar saturación
+            paginas_a_leer = min(len(reader.pages), 60)
+            for i in range(paginas_a_leer): 
+                page = reader.pages[i]
+                contenido = page.extract_text()
+                if contenido:
+                    texto_archivo += contenido + "\n"
+            
+            texto_archivo += f"\n--- FIN: {nombre_archivo} ---\n"
+            
+            # Limpieza básica para reducir tamaño
+            texto_archivo = limpiar_texto(texto_archivo)
             texto_total += texto_archivo
             lista_fuentes.append(nombre_archivo)
         except Exception as e:
@@ -221,24 +237,22 @@ def autodetectar_modelo(api_key):
 
 def procesar_con_ia(texto, api_key, carrera_seleccionada):
     if not api_key: return "⚠️ Error: Falta API Key."
+    
+    # Leemos la biblioteca
     texto_bibliografia, fuentes = leer_biblioteca_carrera(carrera_seleccionada)
+    
     model, error = autodetectar_modelo(api_key)
     if error: return f"Error IA: {error}"
     
     contexto_extra = ""
     if texto_bibliografia:
+        # Limitamos el contexto para evitar errores de memoria (aprox 200k caracteres)
         contexto_extra = f"""
-        URGENTE - USA ESTA BIBLIOGRAFÍA OFICIAL PARA EXTRAER EL TEMA EXACTO:
-        Se han cargado los documentos de estructura oficial ({', '.join(fuentes)}).
+        URGENTE - USA ESTA BIBLIOGRAFÍA OFICIAL ({', '.join(fuentes)}):
+        INSTRUCCIÓN CRÍTICA: Busca en el texto de abajo el TEMA EXACTO (ej: "1.7.2 Tétanos...") y úsalo en la clasificación.
         
-        INSTRUCCIÓN CRÍTICA PARA EL CAMPO 'TEMA':
-        Debes buscar en el texto de estos documentos el tema específico de la pregunta.
-        Copia el nombre del tema LITERALMENTE, incluyendo su numeración jerárquica completa tal como aparece en el PDF.
-        Ejemplo correcto: "1.7.2 Tétanos: prevención, diagnóstico y terapéutica"
-        Ejemplo incorrecto: "Tétanos" (Falta número y descripción completa)
-        
-        CONTENIDO BIBLIOTECA:
-        {texto_bibliografia[:300000]} 
+        CONTENIDO BIBLIOTECA (Extracto):
+        {texto_bibliografia[:200000]} 
         """
     
     prompt = f"""
@@ -249,8 +263,7 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     TAREA:
     Analiza las preguntas proporcionadas.
     
-    1. **CORRECCIÓN DE FORMA (PERMITIDO)**: Si la pregunta original tiene errores ortográficos, dobles espacios, falta de tildes o saltos de línea que dificultan la lectura, CORRÍGELOS para que se vea profesional.
-    2. **CORRECCIÓN DE FONDO (PROHIBIDO)**: NO cambies la terminología médica, los valores clínicos ni el sentido de la pregunta.
+    1. **CORRECCIÓN DE FORMA**: Corrige errores ortográficos y de formato, pero MANTÉN LA LITERALIDAD de la terminología médica.
     
     REGLAS ESTRICTAS DE FORMATO Y CLASIFICACIÓN:
     1. **Opciones**: 4 opciones separadas por "|".
@@ -259,9 +272,10 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
        - Respuesta correcta: [Explicación]
        - Respuestas incorrectas: [Explicación]
        - Mnemotecnia/Tip: [Opcional]
-       - Bibliografía: [CITA OBLIGATORIA EN FORMATO VANCOUVER]
-    4. **Clasificación (Componente y Subcomponente)**: Usa los nombres EXACTOS del esquema proporcionado abajo.
-    5. **Clasificación (Tema)**: EXTRAE EL TEXTO EXACTO DEL PDF DE ESTRUCTURA SUBIDO A LA BIBLIOTECA (incluyendo numeración tipo 1.7.2). Si no encuentras el PDF, usa la mejor aproximación académica posible.
+       - Bibliografía: [CITA EN FORMATO VANCOUVER]
+    4. **Clasificación**: 
+       - Componente y Subcomponente: Nombres EXACTOS del esquema CACES.
+       - Tema: Busca el texto LITERAL en el PDF de biblioteca (ej: "1.7.2 Tétanos...").
     
     ESQUEMA ESTRUCTURAL ({carrera_seleccionada}):
     {json.dumps(ESQUEMA_ACADEMICO[carrera_seleccionada], ensure_ascii=False)}
@@ -269,7 +283,7 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     SALIDA JSON (Array):
     [
         {{
-            "Pregunta": "Texto corregido (solo forma)...",
+            "Pregunta": "Texto corregido...",
             "Opciones de Respuesta": "...",
             "Respuesta correcta": "...",
             "feedback": "...",
@@ -285,11 +299,12 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     """
     
     try:
-        response = model.generate_content(prompt)
+        # Aumentamos el timeout a 500 segundos (8 minutos) para evitar cortes
+        response = model.generate_content(prompt, request_options={'timeout': 500})
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
     except Exception as e:
-        return f"Error procesando: {str(e)}"
+        return f"Error procesando (Intenta con menos preguntas a la vez): {str(e)}"
 
 def convertir_excel(df):
     output = io.BytesIO()
@@ -347,7 +362,7 @@ elif modo == "📝 Procesar Preguntas":
             st.success(f"✅ {len(libros_disponibles)} fuentes disponibles.")
             st.caption("La IA buscará los temas exactos en estos documentos.")
         else:
-            st.warning("⚠️ No has subido PDFs de estructura. La IA no podrá adivinar la numeración exacta (ej: 1.7.2). Ve a 'Administrar Biblioteca' y sube el PDF.")
+            st.warning("⚠️ No has subido PDFs de estructura. La IA no podrá adivinar la numeración exacta.")
 
     with col_input:
         tab_text, tab_file = st.tabs(["Pegar Texto", "Subir Excel"])
@@ -364,7 +379,7 @@ elif modo == "📝 Procesar Preguntas":
                     texto_final = "\n---\n".join(df[c].astype(str).tolist())
 
     if texto_final:
-        with st.status("🧠 Analizando preguntas y buscando temas exactos...", expanded=True) as status:
+        with st.status("🧠 Analizando preguntas con Biblioteca...", expanded=True) as status:
             res = procesar_con_ia(texto_final, api_key, carrera_proceso)
             if isinstance(res, list):
                 status.update(label="¡Completado!", state="complete", expanded=False)
