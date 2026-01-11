@@ -13,10 +13,12 @@ st.markdown("""
     .main-header {font-size: 2.5rem; color: #1E3A8A; font-weight: bold;}
     .sub-header {font-size: 1.5rem; color: #4B5563;}
     .success-box {padding: 1rem; background-color: #D1FAE5; border-radius: 0.5rem; color: #065F46;}
+    /* Ajuste para que el editor de datos ocupe buen espacio */
+    .stDataFrame {width: 100%;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS DE CONOCIMIENTO (CACES) ---
+# --- BASE DE DATOS DE CONOCIMIENTO (CACES - ESTRUCTURA COMPLETA) ---
 ESQUEMA_ACADEMICO = {
     "Medicina": {
         "Medicina Interna": {
@@ -149,96 +151,152 @@ ESQUEMA_ACADEMICO = {
 # --- FUNCIONES ---
 
 def configurar_api():
+    """Configuración de la barra lateral"""
     with st.sidebar:
         st.header("⚙️ Configuración")
         api_key = st.text_input("Ingresa tu API Key de Google Gemini", type="password")
-        st.info("Obtén tu clave gratis en Google AI Studio.")
+        st.info("Esta clave conecta la app con el cerebro de Google AI.")
         
-        # Verificación del esquema cargado
-        if st.checkbox("Ver Esquema de Temas"):
-            carrera = st.selectbox("Carrera", list(ESQUEMA_ACADEMICO.keys()))
+        # Verificación del esquema cargado (Opcional para el usuario)
+        with st.expander("Ver Esquema de Temas Cargado"):
+            carrera = st.selectbox("Selecciona Carrera", list(ESQUEMA_ACADEMICO.keys()))
             st.json(ESQUEMA_ACADEMICO[carrera])
             
         return api_key
 
 def procesar_con_ia(texto, api_key):
-    if not api_key: return "Falta API Key"
+    """Lógica central de conexión con Gemini"""
+    if not api_key: return "⚠️ Error: Falta ingresar la API Key."
     
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
     
+    # --- SOLUCIÓN AL ERROR 404 ---
+    # Intentamos conectar con el modelo más nuevo. Si falla, usamos el clásico.
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        # Hacemos una prueba rápida de conexión
+        model.generate_content("test") 
+    except:
+        # Si el modelo flash falla o no existe, usamos el modelo Pro estándar
+        model = genai.GenerativeModel("gemini-pro")
+    
+    # Instrucciones maestras para la IA
     prompt = f"""
-    Eres un experto evaluador del CACES.
+    Actúa como un Experto Académico y evaluador oficial del examen CACES.
     
-    TAREA:
-    Analiza el texto con preguntas de examen.
-    1. Identifica la respuesta correcta.
-    2. Genera feedback educativo.
-    3. CLASIFICA estrictamente usando SOLO este esquema:
+    TU MISIÓN:
+    Analiza el texto proporcionado que contiene preguntas de examen.
+    1. Identifica la respuesta correcta (si no está marcada, dedúcela por conocimiento médico).
+    2. Genera un feedback educativo breve justificando la respuesta.
+    3. CLASIFICACIÓN ESTRICTA: Usa EXCLUSIVAMENTE el siguiente esquema JSON para asignar Carrera, Componente, Subcomponente y Tema.
+    
+    ESQUEMA OFICIAL:
     {json.dumps(ESQUEMA_ACADEMICO, ensure_ascii=False)}
-    
-    SALIDA JSON (Array de objetos):
+
+    FORMATO DE SALIDA REQUERIDO:
+    Devuelve SOLAMENTE una lista de objetos JSON válida (Array).
     [
         {{
-            "Pregunta": "...",
-            "Opciones de Respuesta": "...",
-            "Respuesta correcta": "...",
-            "feedback": "...",
-            "Carrera": "...",
-            "Componente": "...",
-            "Subcomponente": "...",
-            "Tema": "..."
+            "Pregunta": "Texto completo de la pregunta...",
+            "Opciones de Respuesta": "A)... B)...",
+            "Respuesta correcta": "La opción correcta",
+            "feedback": "Explicación breve...",
+            "Carrera": "Medicina/Enfermería/Odontología",
+            "Componente": "Según esquema",
+            "Subcomponente": "Según esquema",
+            "Tema": "Según esquema"
         }}
     ]
     
-    TEXTO: {texto}
+    TEXTO A PROCESAR: 
+    {texto}
     """
     
     try:
         response = model.generate_content(prompt)
+        # Limpieza de la respuesta para obtener solo el JSON puro
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Error procesando la solicitud: {str(e)}. Intenta con menos preguntas a la vez."
 
 def convertir_excel(df):
+    """Convierte el DataFrame a Excel para descargar"""
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Preguntas')
+        df.to_excel(writer, index=False, sheet_name='Banco_Preguntas')
+        # Ajustar ancho de columnas
+        worksheet = writer.sheets['Banco_Preguntas']
+        for i, col in enumerate(df.columns):
+            width = max(df[col].astype(str).map(len).max(), len(col))
+            worksheet.set_column(i, i, min(width, 50))
     return output.getvalue()
 
-# --- UI ---
-st.markdown('<div class="main-header">Gestor de Preguntas CACES</div>', unsafe_allow_html=True)
+# --- INTERFAZ DE USUARIO (UI) ---
+
+st.markdown('<div class="main-header">🎓 Gestor de Preguntas CACES</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Clasificación Automática con IA</div>', unsafe_allow_html=True)
+
 api_key = configurar_api()
 
-tab1, tab2 = st.tabs(["📝 Texto Manual", "📂 Subir Excel"])
-data = None
+# Pestañas para elegir modo de uso
+tab1, tab2 = st.tabs(["📝 Pegar Texto Manualmente", "📂 Subir Archivo Excel"])
+data_a_procesar = None
 
 with tab1:
-    txt = st.text_area("Pega preguntas aquí:")
-    if st.button("Procesar Texto"): data = txt
+    txt_input = st.text_area("Pega aquí tus preguntas (aunque estén desordenadas):", height=200)
+    if st.button("Procesar Texto", type="primary"): 
+        data_a_procesar = txt_input
 
 with tab2:
-    file = st.file_uploader("Sube Excel", type=["xlsx"])
+    file = st.file_uploader("Sube tu Excel (.xlsx)", type=["xlsx"])
     if file:
         df = pd.read_excel(file)
-        col = st.selectbox("Columna Pregunta", df.columns)
-        if st.button("Procesar Excel"):
-            data = "\n".join(df[col].astype(str).tolist())
+        st.write("Vista previa:", df.head(2))
+        col = st.selectbox("¿En qué columna está el texto de la pregunta?", df.columns)
+        if st.button("Procesar Excel", type="primary"):
+            # Unimos todas las preguntas en un solo texto para enviarlas a la IA
+            data_a_procesar = "\n---\n".join(df[col].astype(str).tolist())
 
-if data:
-    with st.spinner("La IA está clasificando..."):
-        res = procesar_con_ia(data, api_key)
-        if isinstance(res, list):
-            df_res = pd.DataFrame(res)
-            st.success("¡Clasificación completada!")
-            edited_df = st.data_editor(df_res, num_rows="dynamic")
+# --- ZONA DE RESULTADOS ---
+
+if data_a_procesar:
+    if not api_key:
+        st.error("⚠️ Por favor ingresa tu API Key en el menú de la izquierda.")
+    else:
+        with st.status("🤖 La IA está trabajando...", expanded=True) as status:
+            st.write("Analizando contenido médico...")
+            st.write("Clasificando según temario CACES...")
             
-            st.download_button(
-                "📥 Descargar Excel Listo",
-                data=convertir_excel(edited_df),
-                file_name="preguntas_caces.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.error(res)
+            resultado = procesar_con_ia(data_a_procesar, api_key)
+            
+            if isinstance(resultado, list):
+                status.update(label="¡Proceso Completado!", state="complete", expanded=False)
+                
+                df_res = pd.DataFrame(resultado)
+                
+                st.divider()
+                st.subheader("✅ Revisa y Edita los Resultados")
+                
+                # Editor interactivo tipo Excel
+                edited_df = st.data_editor(
+                    df_res, 
+                    num_rows="dynamic",
+                    use_container_width=True
+                )
+                
+                st.divider()
+                
+                # Botón de Descarga
+                excel_bytes = convertir_excel(edited_df)
+                st.download_button(
+                    label="📥 Descargar Excel Final (.xlsx)",
+                    data=excel_bytes,
+                    file_name="preguntas_caces_procesadas.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary"
+                )
+            else:
+                status.update(label="Error", state="error")
+                st.error("Hubo un problema con la respuesta de la IA:")
+                st.warning(resultado)
