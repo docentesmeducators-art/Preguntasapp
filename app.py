@@ -20,104 +20,131 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS DE CONOCIMIENTO (CACES - ESTRUCTURA NUMERADA OFICIAL) ---
+# --- BASE DE DATOS DE CONOCIMIENTO (ESTRUCTURA JERÁRQUICA 4 NIVELES) ---
+# Nota: Esta estructura guía a la IA. La lista de "Temas" se deja vacía o genérica 
+# para que la IA la llene EXACTAMENTE leyendo el PDF que subas a la biblioteca.
 ESQUEMA_ACADEMICO = {
     "Medicina": {
-        "1. Medicina Interna": [
-            "1.1 Emergencias clínicas", "1.2. Sistema cardiovascular", "1.3. Sistema tegumentario", 
-            "1.4. Aparato digestivo", "1.5. Sistema endócrino", "1.6. Sistema hematopoyético", 
-            "1.7. Enfermedades infecciosas", "1.8. Aparato renal y urinario", "1.9. Sistema nervioso", 
-            "1.10. Aparato respiratorio", "1.11. Enfermedades autoinmunes"
-        ],
-        "2. Pediatría": [
-            "2.1. Neonatología", "2.2. Pediatría"
-        ],
-        "3. Gíneco Obstetricia": [
-            "3.1. Ginecología", "3.2. Obstetricia"
-        ],
-        "4. Cirugía": [
-            "4.1 Cirugía general", "4.2 Abdomen agudo", "4.3 Oftalmología", 
-            "4.4 Otorrinolaringología", "4.5 Traumatología", "4.6 Urología"
-        ],
-        "5. Salud Mental": [
-            "5.1. Condiciones psicosociales por ciclos de vida", "5.2. Trastornos mentales"
-        ],
-        "6. Salud Pública": [
-            "6.1. Componentes de atención primaria de salud", "6.2. Epidemiología", 
-            "6.3. Investigación en salud", "6.4 Programas y estrategias del Ministerio de Salud Pública"
-        ],
-        "7. Bioética": [
-            "7.1. Bioética"
-        ]
+        "1. Medicina Interna": {
+            "1.1 Emergencias clínicas": [], 
+            "1.2. Sistema cardiovascular": [],
+            "1.3. Sistema tegumentario": [],
+            "1.4. Aparato digestivo": [],
+            "1.5. Sistema endócrino": [],
+            "1.6. Sistema hematopoyético": [],
+            "1.7. Enfermedades infecciosas": [], # La IA buscará aquí "1.7.2 Tétanos..."
+            "1.8. Aparato renal y urinario": [],
+            "1.9. Sistema nervioso": [],
+            "1.10. Aparato respiratorio": [],
+            "1.11. Enfermedades autoinmunes": []
+        },
+        "2. Pediatría": {
+            "2.1. Neonatología": [],
+            "2.2. Pediatría": []
+        },
+        "3. Gíneco Obstetricia": {
+            "3.1. Ginecología": [],
+            "3.2. Obstetricia": []
+        },
+        "4. Cirugía": {
+            "4.1 Cirugía general": [],
+            "4.2 Abdomen agudo": [],
+            "4.3 Oftalmología": [],
+            "4.4 Otorrinolaringología": [],
+            "4.5 Traumatología": [],
+            "4.6 Urología": []
+        },
+        "5. Salud Mental": {
+            "5.1. Condiciones psicosociales por ciclos de vida": [],
+            "5.2. Trastornos mentales": []
+        },
+        "6. Salud Pública": {
+            "6.1. Componentes de atención primaria de salud": [],
+            "6.2. Epidemiología": [],
+            "6.3. Investigación en salud": [],
+            "6.4 Programas y estrategias del Ministerio de Salud Pública": []
+        },
+        "7. Bioética": {
+            "7.1. Bioética": []
+        }
     },
     "Enfermería": {
-        "1. Fundamentos del cuidado enfermero": [
-            "1.1. Generalidades para el cuidado enfermero", "1.2. Procedimientos básicos del cuidado enfermero",
-            "1.3. Proceso de atención en Enfermería", "1.4. Bioseguridad", "1.5. Ética en el ejercicio profesional",
-            "1.6. Seguridad y calidad en el cuidado enfermero", "1.7. Salud sexual y reproductiva"
-        ],
-        "2. Cuidados de la mujer, recién nacido, niño y adolescente": [
-            "2.1. Salud sexual y reproductiva de la mujer", "2.2. Cuidados de enfermería en el embarazo, parto y puerperio",
-            "2.3. Cuidados gíneco obstétricos de la mujer", "2.4. Cuidados de enfermería en el recién nacido",
-            "2.5. Generalidades sobre niñez y adolescencia", "2.6. Cuidados de enfermería en la niñez y adolescencia"
-        ],
-        "3. Cuidados del adulto y adulto mayor": [
-            "3.1. Generalidades del cuidado de enfermería del adulto y adulto mayor",
-            "3.2. Cuidados de enfermería en el adulto y adulto mayor",
-            "3.3. Cuidados de enfermería a personas con problemas quirúrgicos más frecuentes",
-            "3.4. Procedimientos básicos del cuidado enfermero en pacientes adultos y adultos mayores"
-        ],
-        "4. Cuidado familiar, comunitario e intercultural": [
-            "4.1. Generalidades sobre el cuidado familiar y comunitario", "4.2. Bases para el cuidado familiar y comunitario",
-            "4.3. La enfermería en el trabajo familiar y comunitario"
-        ],
-        "5. Bases educativas, administrativas, investigativas y epidemiológicas del cuidado enfermero": [
-            "5.1. Educación para la salud", "5.2. Bases administrativas del cuidado",
-            "5.3. Bases de investigación científica: metodología de investigación",
-            "5.4. Bases epidemiológicas del cuidado: vigilancia epidemiológica"
-        ]
+        "1. Fundamentos del cuidado enfermero": {
+            "1.1. Generalidades para el cuidado enfermero": [],
+            "1.2. Procedimientos básicos del cuidado enfermero": [],
+            "1.3. Proceso de atención en Enfermería": [],
+            "1.4. Bioseguridad": [],
+            "1.5. Ética en el ejercicio profesional": [],
+            "1.6. Seguridad y calidad en el cuidado enfermero": [],
+            "1.7. Salud sexual y reproductiva": []
+        },
+        "2. Cuidados de la mujer, recién nacido, niño y adolescente": {
+            "2.1. Salud sexual y reproductiva de la mujer": [],
+            "2.2. Cuidados de enfermería en el embarazo, parto y puerperio": [],
+            "2.3. Cuidados gíneco obstétricos de la mujer": [],
+            "2.4. Cuidados de enfermería en el recién nacido": [],
+            "2.5. Generalidades sobre niñez y adolescencia": [],
+            "2.6. Cuidados de enfermería en la niñez y adolescencia": []
+        },
+        "3. Cuidados del adulto y adulto mayor": {
+            "3.1. Generalidades del cuidado de enfermería del adulto y adulto mayor": [],
+            "3.2. Cuidados de enfermería en el adulto y adulto mayor": [],
+            "3.3. Cuidados de enfermería a personas con problemas quirúrgicos más frecuentes": [],
+            "3.4. Procedimientos básicos del cuidado enfermero en pacientes adultos y adultos mayores": []
+        },
+        "4. Cuidado familiar, comunitario e intercultural": {
+            "4.1. Generalidades sobre el cuidado familiar y comunitario": [],
+            "4.2. Bases para el cuidado familiar y comunitario": [],
+            "4.3. La enfermería en el trabajo familiar y comunitario": []
+        },
+        "5. Bases educativas, administrativas, investigativas y epidemiológicas del cuidado enfermero": {
+            "5.1. Educación para la salud": [],
+            "5.2. Bases administrativas del cuidado": [],
+            "5.3. Bases de investigación científica: metodología de investigación": [],
+            "5.4. Bases epidemiológicas del cuidado: vigilancia epidemiológica": []
+        }
     },
     "Odontología": {
-        "1. Operatoria dental": [
-            "1.1. Lesiones cariosas", "1.2. Lesiones no cariosas", "1.3. Procesos restauradores directos"
-        ],
-        "2. Odontopediatría": [
-            "2.1. Técnicas de manejo de la conducta de pacientes pediátricos", "2.2. Desarrollo dental y anomalías del desarrollo",
-            "2.3. Higiene oral mecánica y química en el hogar", "2.4. Caries dental en el niño y el adolescente",
-            "2.5. Selladores de fosas y fisuras y uso de fluoruros", "2.6. Alteraciones pulpares en dientes deciduos y control del dolor",
-            "2.7. Traumatismos de los dientes y tejidos de sostén"
-        ],
-        "3. Cirugía": [
-            "3.1. Diagnóstico clínico y complementario", "3.2. Anestesia", "3.3. Principios de la técnica quirúrgica y exodoncia",
-            "3.4. Indicaciones para cirugía pre protésica", "3.5. Infecciones bucales y maxilares", "3.6. Manejo de urgencias en cirugía"
-        ],
-        "4. Rehabilitación Oral": [
-            "4.1. Oclusión", "4.2. Prótesis fija", "4.3. Prótesis parcial removible", "4.4 Prótesis total", 
-            "4.5. Rehabilitación de dientes endodonciados"
-        ],
-        "5. Endodoncia": [
-            "5.1. Diagnóstico de alteraciones pulpares y periapicales", "5.2. Tratamiento endodóncico",
-            "5.3. Retratamiento y cirugía periapical", "5.4. Complicaciones en endodoncia"
-        ],
-        "6. Periodoncia": [
-            "6.1. Anatomía periodontal", "6.2. Exámenes diagnósticos en periodoncia",
-            "6.3. Etiopatogenia de la enfermedad periodontal", 
-            "6.4. Diagnóstico y clasificación de patologías periodontales (clasificación 2017)",
-            "6.5. Tratamiento periodontal"
-        ],
-        "7. Patología Bucal": [
-            "7.1. Lesiones de tejidos duros y diagnóstico diferencial", "7.2. Patología de tejidos blandos y diagnóstico diferencial",
-            "7.3 Síndromes sistémicos"
-        ],
-        "8. Farmacología": [
-            "8.1. Anestésicos locales", "8.2. Analgésicos y antiinflamatorios", 
-            "8.3. Antibacterianos", "8.4. Antivirales y antimicóticos"
-        ],
-        "9. Medicina Interna": [
-            "9.1. Enfermedades metabólicas", "9.2. Enfermedades respiratorias", "9.3. Embarazo",
-            "9.4. Urgencias y emergencias en Odontología", "9.5. Enfermedades cardiovasculares",
-            "9.6. Trastornos de la coagulación", "9.7. Soporte vital básico"
-        ]
+        "1. Operatoria dental": {
+            "1.1. Lesiones cariosas": [], "1.2. Lesiones no cariosas": [], "1.3. Procesos restauradores directos": []
+        },
+        "2. Odontopediatría": {
+            "2.1. Técnicas de manejo de la conducta de pacientes pediátricos": [], "2.2. Desarrollo dental y anomalías del desarrollo": [],
+            "2.3. Higiene oral mecánica y química en el hogar": [], "2.4. Caries dental en el niño y el adolescente": [],
+            "2.5. Selladores de fosas y fisuras y uso de fluoruros": [], "2.6. Alteraciones pulpares en dientes deciduos y control del dolor": [],
+            "2.7. Traumatismos de los dientes y tejidos de sostén": []
+        },
+        "3. Cirugía": {
+            "3.1. Diagnóstico clínico y complementario": [], "3.2. Anestesia": [], "3.3. Principios de la técnica quirúrgica y exodoncia": [],
+            "3.4. Indicaciones para cirugía pre protésica": [], "3.5. Infecciones bucales y maxilares": [], "3.6. Manejo de urgencias en cirugía": []
+        },
+        "4. Rehabilitación Oral": {
+            "4.1. Oclusión": [], "4.2. Prótesis fija": [], "4.3. Prótesis parcial removible": [], "4.4 Prótesis total": [], 
+            "4.5. Rehabilitación de dientes endodonciados": []
+        },
+        "5. Endodoncia": {
+            "5.1. Diagnóstico de alteraciones pulpares y periapicales": [], "5.2. Tratamiento endodóncico": [],
+            "5.3. Retratamiento y cirugía periapical": [], "5.4. Complicaciones en endodoncia": []
+        },
+        "6. Periodoncia": {
+            "6.1. Anatomía periodontal": [], "6.2. Exámenes diagnósticos en periodoncia": [],
+            "6.3. Etiopatogenia de la enfermedad periodontal": [], 
+            "6.4. Diagnóstico y clasificación de patologías periodontales (clasificación 2017)": [],
+            "6.5. Tratamiento periodontal": []
+        },
+        "7. Patología Bucal": {
+            "7.1. Lesiones de tejidos duros y diagnóstico diferencial": [], "7.2. Patología de tejidos blandos y diagnóstico diferencial": [],
+            "7.3 Síndromes sistémicos": []
+        },
+        "8. Farmacología": {
+            "8.1. Anestésicos locales": [], "8.2. Analgésicos y antiinflamatorios": [], 
+            "8.3. Antibacterianos": [], "8.4. Antivirales y antimicóticos": []
+        },
+        "9. Medicina Interna": {
+            "9.1. Enfermedades metabólicas": [], "9.2. Enfermedades respiratorias": [], "9.3. Embarazo": [],
+            "9.4. Urgencias y emergencias en Odontología": [], "9.5. Enfermedades cardiovasculares": [],
+            "9.6. Trastornos de la coagulación": [], "9.7. Soporte vital básico": []
+        }
     }
 }
 
@@ -201,9 +228,14 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     contexto_extra = ""
     if texto_bibliografia:
         contexto_extra = f"""
-        URGENTE - USA ESTA BIBLIOGRAFÍA OFICIAL:
-        Documentos cargados: {', '.join(fuentes)}.
-        Prioriza esta información para las respuestas y feedback.
+        URGENTE - USA ESTA BIBLIOGRAFÍA OFICIAL PARA EXTRAER EL TEMA EXACTO:
+        Se han cargado los documentos de estructura oficial ({', '.join(fuentes)}).
+        
+        INSTRUCCIÓN CRÍTICA PARA EL CAMPO 'TEMA':
+        Debes buscar en el texto de estos documentos el tema específico de la pregunta.
+        Copia el nombre del tema LITERALMENTE, incluyendo su numeración jerárquica completa tal como aparece en el PDF.
+        Ejemplo correcto: "1.7.2 Tétanos: prevención, diagnóstico y terapéutica"
+        Ejemplo incorrecto: "Tétanos" (Falta número y descripción completa)
         
         CONTENIDO BIBLIOTECA:
         {texto_bibliografia[:300000]} 
@@ -228,9 +260,10 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
        - Respuestas incorrectas: [Explicación]
        - Mnemotecnia/Tip: [Opcional]
        - Bibliografía: [CITA OBLIGATORIA EN FORMATO VANCOUVER]
-    4. **Clasificación**: Debes usar los nombres EXACTOS del siguiente esquema, incluyendo sus NÚMEROS (ej: "1.1 Emergencias clínicas").
+    4. **Clasificación (Componente y Subcomponente)**: Usa los nombres EXACTOS del esquema proporcionado abajo.
+    5. **Clasificación (Tema)**: EXTRAE EL TEXTO EXACTO DEL PDF DE ESTRUCTURA SUBIDO A LA BIBLIOTECA (incluyendo numeración tipo 1.7.2). Si no encuentras el PDF, usa la mejor aproximación académica posible.
     
-    ESQUEMA OFICIAL ({carrera_seleccionada}):
+    ESQUEMA ESTRUCTURAL ({carrera_seleccionada}):
     {json.dumps(ESQUEMA_ACADEMICO[carrera_seleccionada], ensure_ascii=False)}
 
     SALIDA JSON (Array):
@@ -241,9 +274,9 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
             "Respuesta correcta": "...",
             "feedback": "...",
             "Carrera": "{carrera_seleccionada}",
-            "Componente": "...",
-            "Subcomponente": "...",
-            "Tema": "..."
+            "Componente": "1. Medicina Interna",
+            "Subcomponente": "1.7. Enfermedades infecciosas",
+            "Tema": "1.7.2 Tétanos: prevención, diagnóstico y terapéutica"
         }}
     ]
     
@@ -282,6 +315,7 @@ if modo == "📚 Administrar Biblioteca":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Subir Nuevo Documento")
+        st.warning("IMPORTANTE: Sube aquí los PDFs de 'Estructura' (CACES) para que la IA extraiga los temas y números exactos.")
         carrera_upload = st.selectbox("¿A qué carrera pertenece el libro/guía?", list(ESQUEMA_ACADEMICO.keys()))
         archivo_pdf = st.file_uploader("Sube el PDF aquí", type=["pdf"])
         if archivo_pdf and st.button("Guardar en Biblioteca", type="primary"):
@@ -311,8 +345,9 @@ elif modo == "📝 Procesar Preguntas":
         libros_disponibles = listar_archivos(carrera_proceso)
         if libros_disponibles:
             st.success(f"✅ {len(libros_disponibles)} fuentes disponibles.")
+            st.caption("La IA buscará los temas exactos en estos documentos.")
         else:
-            st.warning("⚠️ Sin bibliografía específica. Usando conocimiento general.")
+            st.warning("⚠️ No has subido PDFs de estructura. La IA no podrá adivinar la numeración exacta (ej: 1.7.2). Ve a 'Administrar Biblioteca' y sube el PDF.")
 
     with col_input:
         tab_text, tab_file = st.tabs(["Pegar Texto", "Subir Excel"])
@@ -329,7 +364,7 @@ elif modo == "📝 Procesar Preguntas":
                     texto_final = "\n---\n".join(df[c].astype(str).tolist())
 
     if texto_final:
-        with st.status("🧠 Analizando con Biblioteca...", expanded=True) as status:
+        with st.status("🧠 Analizando preguntas y buscando temas exactos...", expanded=True) as status:
             res = procesar_con_ia(texto_final, api_key, carrera_proceso)
             if isinstance(res, list):
                 status.update(label="¡Completado!", state="complete", expanded=False)
