@@ -165,33 +165,60 @@ def configurar_api():
         return api_key
 
 def procesar_con_ia(texto, api_key):
-    """Lógica robusta de conexión con Gemini"""
+    """Lógica robusta que autodetecta el modelo disponible"""
     if not api_key: return "⚠️ Error: Falta ingresar la API Key."
     
     genai.configure(api_key=api_key)
     
-    # --- LISTA DE MODELOS A PROBAR (ORDEN DE PREFERENCIA) ---
-    # Esto soluciona el error 404 probando cuál funciona en tu cuenta
-    modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
-    
-    model = None
-    errores = []
+    # --- AUTODETECCIÓN DE MODELO ---
+    # En lugar de adivinar, le preguntamos a Google qué modelos tienes disponibles
+    model_name = None
+    try:
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+        
+        # Lógica de preferencia: Buscamos Flash > Pro > Cualquiera
+        # Los nombres suelen ser 'models/gemini-1.5-flash-latest' etc.
+        
+        if not available_models:
+             return "❌ Error Crítico: Tu API Key es válida, pero Google dice que no tienes acceso a ningún modelo. Revisa tu cuenta en Google AI Studio."
 
-    # Bucle de intentos
-    for nombre_modelo in modelos:
-        try:
-            temp_model = genai.GenerativeModel(nombre_modelo)
-            # Prueba mínima de vida
-            temp_model.generate_content("test")
-            model = temp_model
-            # Si llegamos aquí, el modelo funciona
-            break 
-        except Exception as e:
-            errores.append(f"{nombre_modelo}: {str(e)}")
-            continue
-    
-    if not model:
-        return f"❌ Error crítico: Ningún modelo de IA respondió. Detalles técnicos: {'; '.join(errores)}"
+        # Buscamos 'flash' primero (más rápido)
+        for m in available_models:
+            if 'flash' in m.lower() and '1.5' in m:
+                model_name = m
+                break
+        
+        # Si no hay flash, buscamos 'pro'
+        if not model_name:
+            for m in available_models:
+                if 'pro' in m.lower() and '1.5' in m:
+                    model_name = m
+                    break
+                    
+        # Si no, el primer Gemini que encontremos
+        if not model_name:
+            for m in available_models:
+                if 'gemini' in m.lower():
+                    model_name = m
+                    break
+        
+        # Último recurso: el primero de la lista
+        if not model_name:
+            model_name = available_models[0]
+
+        # st.toast(f"Usando modelo: {model_name}") # Para debug visual
+
+    except Exception as e:
+        return f"Error al listar modelos (revisa tu API Key): {str(e)}"
+
+    # Configuramos el modelo encontrado
+    try:
+        model = genai.GenerativeModel(model_name)
+    except Exception as e:
+        return f"Error al conectar con el modelo {model_name}: {str(e)}"
     
     # Instrucciones maestras para la IA
     prompt = f"""
@@ -230,7 +257,7 @@ def procesar_con_ia(texto, api_key):
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
     except Exception as e:
-        return f"Error procesando la solicitud con el modelo seleccionado: {str(e)}"
+        return f"Error procesando la solicitud: {str(e)}"
 
 def convertir_excel(df):
     """Convierte el DataFrame a Excel para descargar"""
@@ -272,7 +299,7 @@ if data_a_procesar:
         st.error("⚠️ Por favor ingresa tu API Key.")
     else:
         with st.status("🤖 La IA está trabajando...", expanded=True) as status:
-            st.write("Buscando el mejor modelo de IA disponible...")
+            st.write("Conectando con Google AI...")
             
             resultado = procesar_con_ia(data_a_procesar, api_key)
             
