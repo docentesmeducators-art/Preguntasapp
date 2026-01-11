@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
+from google.api_core import retry
 import json
 import io
 import os
@@ -317,6 +318,7 @@ def leer_biblioteca_carrera(carrera):
             reader = pypdf.PdfReader(ruta_completa)
             texto_archivo = f"\n--- INICIO FUENTE BIBLIOGRÁFICA: {nombre_archivo} ---\n"
             
+            # Leemos primeras 60 paginas para contexto
             paginas_a_leer = min(len(reader.pages), 60)
             for i in range(paginas_a_leer):
                 contenido = reader.pages[i].extract_text()
@@ -331,16 +333,18 @@ def leer_biblioteca_carrera(carrera):
             
     return texto_total, lista_fuentes
 
-def extraer_texto_pdf_preguntas(archivo_pdf):
-    """Extrae texto plano de un PDF de preguntas subido por el usuario"""
-    texto_extraido = ""
+def extraer_paginas_pdf(archivo_pdf):
+    """Extrae las páginas del PDF como una lista de textos"""
+    paginas = []
     try:
         reader = pypdf.PdfReader(archivo_pdf)
         for page in reader.pages:
-            texto_extraido += page.extract_text() + "\n"
+            texto = page.extract_text()
+            if texto:
+                paginas.append(texto)
     except Exception as e:
-        return f"Error al leer PDF de preguntas: {str(e)}"
-    return texto_extraido
+        st.error(f"Error al leer PDF de preguntas: {str(e)}")
+    return paginas
 
 # --- FUNCIONES DE IA ---
 
@@ -372,7 +376,7 @@ def autodetectar_modelo(api_key):
 def procesar_con_ia(texto, api_key, carrera_seleccionada):
     if not api_key: return "⚠️ Error: Falta API Key."
     
-    # 1. Leer libros subidos para contexto de respuesta (NO para estructura)
+    # 1. Leer libros subidos para contexto de respuesta
     texto_bibliografia, fuentes = leer_biblioteca_carrera(carrera_seleccionada)
     
     model, error = autodetectar_modelo(api_key)
@@ -380,39 +384,36 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
     
     contexto_extra = ""
     if texto_bibliografia:
+        # Limitamos el contexto para evitar errores de payload excesivo
         contexto_extra = f"""
-        FUENTES DE CONSULTA:
-        El usuario ha subido los siguientes libros: {', '.join(fuentes)}.
-        Usa esta información para responder la pregunta y generar el feedback.
+        FUENTES DE CONSULTA (Prioridad Alta):
+        Usa esta información de los libros subidos ({', '.join(fuentes)}) para responder:
         
-        CONTENIDO DE LIBROS:
-        {texto_bibliografia}
+        {texto_bibliografia[:200000]} 
         """
     
-    # Prompt optimizado para usar la estructura HARDCODED
+    # Prompt optimizado
     prompt = f"""
     Actúa como un Evaluador Académico CACES (Ecuador).
     
     {contexto_extra}
     
     TAREA:
-    Analiza el texto de entrada que contiene una o varias preguntas. Tu objetivo es detectar las preguntas, estandarizar su formato y CLASIFICARLAS.
+    Analiza el texto de entrada. Detecta preguntas, estandariza su formato y clasifícalas.
     
     REGLAS ESTRICTAS DE FORMATO:
-    1. **Opciones**: Siempre 4 opciones, separadas por "|".
+    1. **Opciones**: 4 opciones, separadas por "|".
     2. **Respuesta Correcta**: COPIA EXACTA e IDÉNTICA de la opción correcta.
-    3. **Feedback**: Estructura OBLIGATORIA. Separa CADA sección con DOBLE SALTO DE LÍNEA (\\n\\n) para que se visualicen como párrafos distintos:
+    3. **Feedback**: Separa CADA sección con DOBLE SALTO DE LÍNEA (\\n\\n):
        - Respuesta correcta: [Explicación]\\n\\n
        - Respuestas incorrectas: [Explicación]\\n\\n
        - Mnemotecnia/Tip: [Opcional]\\n\\n
        - Bibliografía: [Cita en formato VANCOUVER]
 
     REGLAS DE CLASIFICACIÓN (OBLIGATORIO):
-    Debes clasificar cada pregunta seleccionando la ruta más apropiada del siguiente esquema OFICIAL.
-    NO INVENTES TEMAS. Debes elegir uno de la lista proporcionada.
-    Si el tema exacto no existe, elige el que más se acerque conceptualmente dentro del Subcomponente correcto.
-
-    ESQUEMA OFICIAL A USAR ({carrera_seleccionada}):
+    Usa SOLO el siguiente esquema. NO inventes temas.
+    
+    ESQUEMA OFICIAL ({carrera_seleccionada}):
     {json.dumps(ESQUEMA_ACADEMICO[carrera_seleccionada], ensure_ascii=False)}
 
     SALIDA JSON (Array):
@@ -423,29 +424,30 @@ def procesar_con_ia(texto, api_key, carrera_seleccionada):
             "Respuesta correcta": "C",
             "feedback": "...",
             "Carrera": "{carrera_seleccionada}",
-            "Componente": "1. Nombre Componente...",
-            "Subcomponente": "1.1 Nombre Subcomponente...",
-            "Tema": "1.1.1 Nombre Tema Exacto..."
+            "Componente": "...",
+            "Subcomponente": "...",
+            "Tema": "..."
         }}
     ]
     
-    TEXTO CON PREGUNTAS A PROCESAR: 
+    TEXTO A PROCESAR: 
     {texto}
     """
     
     try:
-        response = model.generate_content(prompt, request_options={'timeout': 300})
+        # Configuración de reintentos para evitar errores 503/504 esporádicos
+        retry_policy = {"retry": retry.Retry(predicate=retry.if_transient_error, initial=10, multiplier=1.5, timeout=300)}
+        response = model.generate_content(prompt, request_options=retry_policy)
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
     except Exception as e:
-        return f"Error procesando: {str(e)}"
+        return f"Error procesando fragmento: {str(e)}"
 
 def convertir_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Banco_Preguntas')
         worksheet = writer.sheets['Banco_Preguntas']
-        # Formato de celda con ajuste de texto para el feedback
         workbook = writer.book
         format_wrap = workbook.add_format({'text_wrap': True, 'valign': 'top'})
         
@@ -471,7 +473,7 @@ if modo == "📚 Cargar Libros de Consulta":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Subir Libros/Guías")
-        st.info("Sube aquí libros para ayudar a la IA a responder (NO afecta la estructura, esa ya está fija en el código).")
+        st.info("Sube aquí libros para ayudar a la IA a responder (NO afecta la estructura).")
         carrera_upload = st.selectbox("Carrera", list(ESQUEMA_ACADEMICO.keys()))
         archivo_pdf = st.file_uploader("Sube el PDF", type=["pdf"])
         
@@ -500,8 +502,6 @@ elif modo == "📝 Procesar Preguntas":
     with col_conf:
         st.info("Configuración")
         carrera_proceso = st.selectbox("Selecciona Carrera", list(ESQUEMA_ACADEMICO.keys()))
-        
-        # Verificación de libros
         archivos_disp = listar_archivos(carrera_proceso)
         if archivos_disp:
             st.success(f"✅ {len(archivos_disp)} libros de consulta disponibles.")
@@ -509,13 +509,15 @@ elif modo == "📝 Procesar Preguntas":
             st.info("ℹ️ No hay libros subidos. La IA usará su conocimiento general.")
 
     with col_work:
-        # Pestañas para los diferentes métodos de entrada
         tab_txt, tab_xls, tab_pdf = st.tabs(["Pegar Texto", "Subir Excel", "Subir PDF de Preguntas"])
         texto_final = None
+        origen_datos = None
         
         with tab_txt:
             txt = st.text_area("Pega las preguntas aquí:", height=200)
-            if st.button("Procesar Texto"): texto_final = txt
+            if st.button("Procesar Texto"): 
+                texto_final = txt
+                origen_datos = "texto"
         
         with tab_xls:
             f = st.file_uploader("Sube Excel", type=["xlsx"])
@@ -524,19 +526,70 @@ elif modo == "📝 Procesar Preguntas":
                 c = st.selectbox("Columna Pregunta", df.columns)
                 if st.button("Procesar Excel"):
                     texto_final = "\n---\n".join(df[c].astype(str).tolist())
+                    origen_datos = "excel"
         
         with tab_pdf:
             pdf_q = st.file_uploader("Sube PDF con preguntas", type=["pdf"])
             if pdf_q and st.button("Procesar PDF de Preguntas"):
-                with st.spinner("Extrayendo texto del PDF..."):
-                    texto_extraido = extraer_texto_pdf_preguntas(pdf_q)
-                    if texto_extraido:
-                        texto_final = texto_extraido
-                    else:
-                        st.error("No se pudo extraer texto del PDF.")
+                origen_datos = "pdf"
+                # Aquí no extraemos todo el texto de golpe, lo manejamos abajo por lotes
 
-    if texto_final:
-        with st.status("🧠 Analizando y clasificando según esquema oficial...", expanded=True) as status:
+    # Lógica de Procesamiento
+    if origen_datos == "pdf" and pdf_q:
+        with st.status("🚀 Iniciando procesamiento por lotes...", expanded=True) as status:
+            paginas = extraer_paginas_pdf(pdf_q)
+            if not paginas:
+                st.error("No se pudo leer el PDF.")
+                st.stop()
+            
+            # --- ESTRATEGIA DE BATCHING (LOTES) ---
+            # Procesamos de 2 en 2 páginas para evitar errores de Timeout (Error 504)
+            TAMANO_LOTE = 2 
+            lotes = ["\n".join(paginas[i:i+TAMANO_LOTE]) for i in range(0, len(paginas), TAMANO_LOTE)]
+            
+            resultados_totales = []
+            barra_progreso = st.progress(0)
+            
+            st.write(f"📄 Documento dividido en {len(lotes)} partes para análisis detallado.")
+            
+            for i, lote_texto in enumerate(lotes):
+                st.write(f"Analizando parte {i+1} de {len(lotes)}...")
+                res_parcial = procesar_con_ia(lote_texto, api_key, carrera_proceso)
+                
+                if isinstance(res_parcial, list):
+                    resultados_totales.extend(res_parcial)
+                else:
+                    st.warning(f"⚠️ Hubo un problema en la parte {i+1}: {res_parcial}")
+                
+                barra_progreso.progress((i + 1) / len(lotes))
+                time.sleep(1) # Pequeña pausa para no saturar la API
+            
+            if resultados_totales:
+                status.update(label="¡Análisis Completo!", state="complete", expanded=False)
+                df_res = pd.DataFrame(resultados_totales)
+                
+                st.divider()
+                st.subheader("✅ Resultados Consolidados")
+                editado = st.data_editor(
+                    df_res, 
+                    num_rows="dynamic", 
+                    use_container_width=True,
+                    column_config={"feedback": st.column_config.TextColumn("Feedback", width="large")}
+                )
+                
+                st.download_button(
+                    "📥 Descargar Excel Final", 
+                    convertir_excel(editado), 
+                    "banco_preguntas_caces.xlsx", 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    type="primary"
+                )
+            else:
+                st.error("No se pudieron extraer preguntas válidas del PDF.")
+
+    elif texto_final:
+        # Procesamiento normal para texto corto o Excel
+        with st.status("🧠 Analizando...", expanded=True) as status:
             res = procesar_con_ia(texto_final, api_key, carrera_proceso)
             
             if isinstance(res, list):
@@ -549,9 +602,7 @@ elif modo == "📝 Procesar Preguntas":
                     df_res, 
                     num_rows="dynamic", 
                     use_container_width=True,
-                    column_config={
-                        "feedback": st.column_config.TextColumn("Feedback", width="large")
-                    }
+                    column_config={"feedback": st.column_config.TextColumn("Feedback", width="large")}
                 )
                 
                 st.download_button(
